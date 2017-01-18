@@ -18,9 +18,9 @@ Dispersion.dat, dispersion relation of RPA.
 ##Physics:
 If you don't have much idea what a Pairing Vibration and what a Random Phase Approximation (RPA) is, have a torough look at:
 
--Physics of Atomic Nuclei 77, 941: http://link.springer.com/article/10.1134/S106377881407014X
--Physica Scripta, Volume 91, Number 6:  http://iopscience.iop.org/article/10.1088/0031-8949/91/6/063012/meta
--Phys. Rev. C 87, 054321, http://journals.aps.org/prc/abstract/10.1103/PhysRevC.87.054321
+- Physics of Atomic Nuclei 77, 941: http://link.springer.com/article/10.1134/S106377881407014X
+- Physica Scripta, Volume 91, Number 6:  http://iopscience.iop.org/article/10.1088/0031-8949/91/6/063012/meta
+- Phys. Rev. C 87, 054321, http://journals.aps.org/prc/abstract/10.1103/PhysRevC.87.054321
 
 and refs. therein.
 
