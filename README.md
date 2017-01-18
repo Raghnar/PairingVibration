@@ -1,13 +1,18 @@
 # PairingVibration
-Code for the calculation of Pairing Vibration with phenomenological Random Phase Approximation (RPA)
+Code for the calculation of Pairing Vibration with phenomenological Random Phase Approximation (RPA). Eventually reads the Atomic Mass Evaluation Database for an automatic usage.
 
-Andrea Idini
+Code is not (and never will be) complete, releasing as process, not as product. For suggestions, contact me.
+
+Andrea Idini, Univ. of Surrey
 
 
 ##How to Run:
 Use Makefile to compile.
-Change nucleus and proton/neutron vibration in Input\_WS.in, the program will scan the
-Atomic Mass Evaluation 2012 for masses and enjoy the rest.
+Change nucleus and proton/neutron vibration in Input\_WS.in. 
+
+If you use the option 2, the program will scan the Atomic Mass Evaluation 2012 for masses and fix nuclear levels with a standard Bohr and Mottelson Wood Saxon, enjoy the rest.
+
+If you use the option 1, you can specify levels and other inputs following the format in the example.
 
 
 ##Output:
@@ -25,7 +30,7 @@ If you don't have much idea what a Pairing Vibration and what a Random Phase App
 and refs. therein.
 
 
-*License*
+###License
 The Software is provided "as is" according to the GNUv3 License. 
 I do not offer support.
 However, feel free to drop me an email with the 
