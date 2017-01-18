@@ -360,23 +360,36 @@
        use Stuff
 
        implicit none
-       integer   :: i, icalc
+       integer             :: i, icalc, Znucl,inuc
+       real (kind=8)       :: Sep_hole,Sep_part,Amass, PairingGap
+       logical             :: flag_efn = .false.
 
-       logical   :: flag_efn = .false.
-
+       
        ir_tot = ceiling(EcutFunction/dW)
        allocate (DispersionFunction(-ir_tot:ir_tot))
 
        open(unit=10,file='Dispersione.dat')
        open(unit=11,file='Factors.dat')
        open(unit=12,file='RPA.dat')
+       open(unit=15,file='Input_WS.in',status='old')
+       open(unit=20,file='mass.mas12', status='old',action = 'read')
+       open(unit=21,file='rct2.mas12', status='old',action = 'read')
+       open(unit=51,file='outlevels.dat')
+
        
+       read(15,*)Amass,Znucl,    inuc
+
+       call read_mass(int(Amass),Znucl,inuc,DiffAddition,DiffRemoval,Sep_hole,Sep_part,PairingGap)
+       
+       write(*,*)'-- Separation Energy of hole and particle states =', Sep_hole,Sep_part
+       write(*,*)'- Correlation Energy of Addition and Removal =', DiffAddition, DiffRemoval
+       write(*,*)'------------- Pairing Gap ------------------ =',PairingGap
        
        write(*,*)'New = 2, Livelli Sperimentali = 1, Livelli Self Energy = 0'
        read(*,*) icalc
 
        if(icalc.le.1)call read_define(icalc,flag_efn)
-       if(icalc.eq.2)call make_levels
+       if(icalc.eq.2)call make_levels(Amass,Znucl,inuc,Sep_hole,Sep_part)
 
        call disp_relation
 
@@ -515,13 +528,14 @@
 end subroutine define_minima
 
 !---------------------------------!
-     subroutine make_levels
+!Make the levels launching a Wood Saxon and readjusting to Separation Energies
+     subroutine make_levels(Amass,Znucl,inuc, Sep_hole,Sep_part)
        use Stuff
        implicit none
        integer :: i,j,ir, Pnum
        real*8  :: y,Sep_part,Sep_hole,Diff_Sep
        !------ Input Wood Saxon -------!
-       integer :: Ipro,inuc
+       integer :: Znucl,inuc
        real*8  :: Amass,r0,an0,rs0,Vrn_n,Vson,EFP !A, Z, r0, a0, rs0 di Wood Saxon
        !output
        DIMENSION PS(mphon,Nbox)
@@ -531,26 +545,22 @@ end subroutine define_minima
        !-------------------------------!
        Zeta = 1.d0
 
-       
-       open(unit=15,file='Input_WS.in')
-       
-       read(15,*)Amass,Ipro
-       read(15,*)Sep_hole,Sep_part
-       read(15,*)DiffAddition, DiffRemoval
-       
+       if(inuc.eq.1)then
+          write(*,*)'not ready for proton PV'
+          stop
+       endif
        !Wood Saxon Definition B&M (2-182)
        r0 = 1.27;rs0 = 1.27; an0 = 0.67
-       Vrn_n =  -51.d0 + 33.d0*(1.d0*Amass - 2.d0*Ipro)/Amass
+       Vrn_n =  -51.d0 + 33.d0*(1.d0*Amass - 2.d0*Znucl)/Amass
        Vson  = 0.44d0*Vrn_n 
-
-       inuc = 0 !0 neutroni, 1 protoni                  
+                
        call boundary(mphon, mphon, dr,                                &
-                     Amass,Ipro,inuc,r0,rs0,An0,Vson,Vrn_n,           &
+                     Amass,Znucl,inuc,r0,rs0,An0,Vson,Vrn_n,           &
                         0,lmax,EcutFunction,Nbox,                     &
               PS,          Nlivelli,jjk,llk,e_sp,DVN)
              !WaveFunction, N, J, L , E  , V, dim vectors1, dim vectors 2 
        do i=1,50
-          write(21,*)e_sp(i),float(llk(i)),float(jjk(i))
+          write(51,*)e_sp(i),float(llk(i)),float(jjk(i))
        enddo
        
        !Sorting Secondo Energia
@@ -585,10 +595,10 @@ end subroutine define_minima
           Pnum = Pnum + jjk(i)+1    
           write(*,*)llk(i),jjk(i),e_sp(i),Pnum
           
-          if    (inuc.eq.0 .and. Pnum.ge.Amass-Ipro)then !neutrons
+          if    (inuc.eq.0 .and. Pnum.ge.Amass-Znucl)then !neutrons
              iGapDn=i;iGapUp=i+1
              exit
-          elseif(inuc.eq.1 .and. Pnum.ge.      Ipro)then !protons
+          elseif(inuc.eq.1 .and. Pnum.ge.      Znucl)then !protons
              iGapDn=i;iGapUp=i+1          
              exit
           endif
@@ -619,8 +629,133 @@ end subroutine define_minima
         NLivelli = 10
       
      end subroutine
+     
+!--------------------------------------------------------------------!
+
+!Read Masses from AME 2003 and following, remember to remove # (substitute with .)
+!Then calculates DiffAddition and DiffRemoval
+
+!Input: Amass, Znucl = A, Z of the nucleus, 
+!       inucl = 0, for neutron calculation, = 1 for proton calculation
+
+!Output: DiffAddition,DiffRemoval = Correlation Energy, Positive
+!        Sep_hole,Sep_part = Energy of Hole and Particle state (thus Separation of nucleons from A and A+1 Nucleus), negative.
+!        PairingGap = from 3-point formula, Positive.
+
+     subroutine read_mass(Amass,Znucl,inuc,DiffAddition,DiffRemoval,Sep_hole,Sep_part,PairingGap)
+       implicit none
+       integer                          :: Atable,Ztable,Amass,Znucl,inuc
+       real (kind = 8) ,dimension (5)   :: BindingE
+       real (kind = 8)                  :: DiffAddition,DiffRemoval,Sep_hole,Sep_part,PairingGap
+       
+       
+       character(LEN=9999) :: parkChar
+       integer             :: i, parkInt        
+       real (kind = 8)     :: parkReal, ParkReal1,parkReal2
 
 
+       do while(.true.)
+          read(20,*,iostat=parkInt)parkChar
+          if(index(trim(parkChar),'N-Z').gt.0)then
+            !write(*,*)'found'
+            exit
+          endif
+          if(parkInt < 0)then
+             write(*,*)'End of File. Cannot Find Masses, Check Input mass.mas12'
+             stop
+          endif
+       end do
+       read(20,*)
+
+       do i=1,5
+         do while (.true.)
+           read(20,654)parkChar,ParkInt,ParkInt,Ztable,Atable, parkChar, parkChar,ParkReal, ParkReal, BindingE(i)
+           if(inuc.eq.0 .and. Atable.eq.Amass-3+i .and. Ztable.eq.Znucl    )then !neutron pairing Vibration, search for A+-2 and Z fixed
+             exit
+           endif        
+           if(inuc.eq.1 .and. Atable.eq.Amass-3+i .and. Ztable.eq.Znucl-3+i)then !proton pairing Vibration, search for Z+-2 and N fixed
+             exit  !if has the right mass and charge exit the inner reading cycle and associate BindingE(i) and goes to next i in the outside cycle
+           endif
+         enddo
+       enddo
+       
+654 format (a1,i3,i5,i5,i5,1x,a3,a4,1x,f13.5,f11.5,f11.3,f9.3,1x,a2,f11.3,f9.3,1x,i3,1x,f12.5,f11.5) 
+
+       do i=1,5
+         BindingE(i) = BindingE(i)*(Amass-3+i)/1000.d0  !binding energy of nucleus in MeV
+!         write(*,*)(Amass-3+i),BindingE(i)
+       enddo
+       
+           !addition: B(A+2)-B(A)-2(B(A+1)-B(A))
+       DiffAddition = BindingE(5) - BindingE(3) - 2.d0*(BindingE(4)-BindingE(3))
+           !removal : B(A-2)-B(A)-2(B(A-1)-B(A))
+       DiffRemoval  = BindingE(1) - BindingE(3) - 2.d0*(BindingE(2)-BindingE(3))
+           !Delta   = -1/2 (B(A-1)+B(A+1)-2B(A))
+       PairingGap = - ( BindingE(2) + BindingE(4) - 2.d0*BindingE(3) )/2.d0
+
+       do while(.true.)
+          read(21,'(a10)',iostat=i)parkChar
+          if(index(trim(parkChar),'1 A').gt.0)then
+            !write(*,*)'found'
+            exit
+          endif
+          if(i < 0)then
+             write(*,*)'Cannot Find Separation Energies, Check Input rct2.mas12'
+             stop
+          endif
+       end do
+       
+       do while (.true.) !Seach for separation energies Sep_hole,Sep_part
+         read(21,'(a1,i3,a3,i5,1x,a40)')parkChar,Atable,parkChar,Ztable,parkChar!,parkReal
+         if(inuc .eq. 0) then
+           if(Atable.eq.Amass .and. Ztable.eq.Znucl)then 
+            if(index(trim(parkChar(1:20) ),'*').le.0)then
+              read(parkChar(1:20),*)Sep_hole
+            else
+              write(*,*)'Neutron Separation Energy non defined, cannot calculate on the dripline'
+              stop
+            endif           
+           endif
+           if(Atable.eq.Amass+1 .and. Ztable.eq.Znucl)then 
+            if(index(trim(parkChar(1:20) ),'*').le.0)then
+              read(parkChar(1:20),*)Sep_part
+              exit
+            else
+              write(*,*)'Neutron Separation Energy non defined, cannot calculate on the dripline'
+              stop
+            endif
+           endif
+                       
+         elseif(inuc .eq. 1) then
+           if(Atable.eq.Amass .and. Ztable.eq.Znucl)then
+            if(index(trim(parkChar(20:40) ),'*').le.0)then
+              read(parkChar(20:40),*)Sep_hole
+            else
+              write(*,*)'Proton Separation Energy non defined, cannot calculate on the dripline'
+              stop
+            endif
+           endif
+           if(Atable.eq.Amass+1 .and. Ztable.eq.Znucl+1)then 
+            if(index(trim(parkChar(20:40) ),'*').le.0)then
+              read(parkChar(20:40),*)Sep_part
+              exit
+            else
+              write(*,*)'Proton Separation Energy non defined, cannot calculate on the dripline'
+              stop
+            endif
+           endif
+           
+         endif        
+       enddo
+
+       Sep_hole = -Sep_hole/1000.d0; Sep_part = -Sep_part/1000.d0
+       !write(*,*)Atable,Ztable,Sep_hole,Sep_part
+
+      end subroutine read_mass
+      
+
+!*****************************************************************************************
+!*****************************************************************************************
       subroutine  boundary(nnp, imaxlev, h,              &
                      Amass,Ipro,inuc,r0,rs0,An0,Vso,Vrn,            &
                         Lmin,Lmax,Ecut,Nmaxt,                   &
@@ -712,11 +847,11 @@ end subroutine define_minima
        end do
        
        nh=1
-      write(21,*)'Scrivo i livelli di particella singola'
-      write(21,*)'protoni-> isospin 1 o neutroni -> isospin 0'
-      write(21,*)
-      write(21,*)'Energia , N , L , J , isospin'
-      write(21,*)
+      write(51,*)'Scrivo i livelli di particella singola'
+      write(51,*)'protoni-> isospin 1 o neutroni -> isospin 0'
+      write(51,*)
+      write(51,*)'Energia , N , L , J , isospin'
+      write(51,*)
 
        do L=Lmin,Lmax
         
@@ -778,9 +913,9 @@ end subroutine define_minima
        STOP 
        END IF 
        if(inuc.eq.0)write(*,*)' N. OF ACTIVE NEUTRON LEVELS = ', NNST 
-       if(inuc.eq.0)write(21,*)' N. OF ACTIVE NEUTRON LEVELS = ', NNST 
+       if(inuc.eq.0)write(51,*)' N. OF ACTIVE NEUTRON LEVELS = ', NNST 
        if(inuc.eq.1)write(*,*)' N. OF ACTIVE PROTON LEVELS = ', NNST 
-       if(inuc.eq.1)write(21,*)' N. OF ACTIVE PROTON LEVELS = ', NNST 
+       if(inuc.eq.1)write(51,*)' N. OF ACTIVE PROTON LEVELS = ', NNST 
 
       do i=1,nnst
        if(inuc.eq.1) then ! in output il codice vuole solo il potenziale centrale per protoni

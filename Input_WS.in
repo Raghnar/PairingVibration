@@ -1,3 +1,1 @@
-40,20                //A, Z
--15.6350, -8.3628    //Separation Energy hole state, Separation Energy particle-state
-3.1179, 2.339        //Correlation Energy Addition, Removal
+120,50,0                //A, Z, 0=neutron, 1=proton
