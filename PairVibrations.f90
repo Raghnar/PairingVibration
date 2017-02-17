@@ -388,8 +388,15 @@
        write(*,*)'New = 2, Livelli Sperimentali = 1, Livelli Self Energy = 0'
        read(*,*) icalc
 
-       if(icalc.le.1)call read_define(icalc,flag_efn)
-       if(icalc.eq.2)call make_levels(Amass,Znucl,inuc,Sep_hole,Sep_part)
+       if(icalc.le.1)then
+         call read_define(icalc,flag_efn)
+       elseif(icalc.eq.2)then
+         call make_levels(Amass,Znucl,inuc,Sep_hole,Sep_part)
+       else
+         write(*,*)'wrong starting option icalc'
+         stop
+       endif
+
 
        call disp_relation
 
@@ -555,7 +562,7 @@ end subroutine define_minima
           Vson  = 0.44d0*Vrn_p   
 
        call boundary(mphon, mphon, dr,                                &
-                     Amass,Znucl,inuc,r0,rs0,An0,Vson,Vrn_n,           &
+                     Amass,Znucl,inuc,r0,rs0,An0,Vson,Vrn_p,           &
                         0,lmax,EcutFunction,Nbox,                     &
               PS,          Nlivelli,jjk,llk,e_sp,DVN)
 
@@ -839,8 +846,8 @@ end subroutine define_minima
            TEMP=(R-RNS0)/AN0 
            EX=EXP(-TEMP) 
            VSON(j)=VSO*Rs0**2*EX/(1+EX)/(R*AN0*(1.+EX)) 
-!        write(100,*)R,VN(j),VRN
-           write(100,*)VSON(j),VSO,RNS0,EX/(1+EX)/(R*AN0*(1.+EX)) 
+!
+!           write(100,*)VSON(j),VSO,RNS0,EX/(1+EX)/(R*AN0*(1.+EX)) 
 !C    calcola il potenziale di una sfera omogenea carica di raggio
           if(inuc.eq.1) then
           if((R-RN0).le.0) then
@@ -857,6 +864,7 @@ end subroutine define_minima
            DHMEN(J)=0.d0
            D2HMEN(J)=0.d0
         RHO(j)=0.d0
+        write(100,*)R,VN(j),VRN
        end do
        
        nh=1
