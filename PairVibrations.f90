@@ -536,7 +536,8 @@ end subroutine define_minima
        real*8  :: y,Sep_part,Sep_hole,Diff_Sep
        !------ Input Wood Saxon -------!
        integer :: Znucl,inuc
-       real*8  :: Amass,r0,an0,rs0,Vrn_n,Vson,EFP !A, Z, r0, a0, rs0 di Wood Saxon
+       real*8  :: Amass,r0,an0,rs0,Vson,EFP !A, Z, r0, a0, rs0 di Wood Saxon
+       real*8  :: Vrn_n,Vrn_p
        !output
        DIMENSION PS(mphon,Nbox)
        DIMENSION DVN(mphon)
@@ -544,20 +545,32 @@ end subroutine define_minima
        real*8  :: PS, DVN
        !-------------------------------!
        Zeta = 1.d0
+    !Wood Saxon Definition B&M (2-182)
+
+       r0 = 1.27;rs0 = 1.27; an0 = 0.67
 
        if(inuc.eq.1)then
-          write(*,*)'not ready for proton PV'
-          stop
-       endif
-       !Wood Saxon Definition B&M (2-182)
-       r0 = 1.27;rs0 = 1.27; an0 = 0.67
-       Vrn_n =  -51.d0 + 33.d0*(1.d0*Amass - 2.d0*Znucl)/Amass
-       Vson  = 0.44d0*Vrn_n 
-                
+          write(*,*)'Protons Pairing Vibration'
+          Vrn_p =  -51.d0 - 33.d0*(1.d0*Amass - 2.d0*Znucl)/Amass    
+          Vson  = 0.44d0*Vrn_p   
+
        call boundary(mphon, mphon, dr,                                &
                      Amass,Znucl,inuc,r0,rs0,An0,Vson,Vrn_n,           &
                         0,lmax,EcutFunction,Nbox,                     &
               PS,          Nlivelli,jjk,llk,e_sp,DVN)
+
+       else
+          write(*,*)'Neutrons Pairing Vibration'
+   
+          Vrn_n =  -51.d0 + 33.d0*(1.d0*Amass - 2.d0*Znucl)/Amass
+          Vson  = 0.44d0*Vrn_n 
+       call boundary(mphon, mphon, dr,                                &
+                     Amass,Znucl,inuc,r0,rs0,An0,Vson,Vrn_n,           &
+                        0,lmax,EcutFunction,Nbox,                     &
+              PS,          Nlivelli,jjk,llk,e_sp,DVN)
+
+       endif
+                
              !WaveFunction, N, J, L , E  , V, dim vectors1, dim vectors 2 
        do i=1,50
           write(51,*)e_sp(i),float(llk(i)),float(jjk(i))
