@@ -645,8 +645,9 @@ end subroutine define_minima
         
         do i=1,NLivelli
          ek(i)=abs(e_sp(i)-efn)
+!         if(e_sp(i).gt.0.d0)exit
         enddo
-        NLivelli = 10
+!        NLivelli = i
       
      end subroutine
      
@@ -938,13 +939,13 @@ end subroutine define_minima
        if(inuc.eq.1)write(*,*)' N. OF ACTIVE PROTON LEVELS = ', NNST 
        if(inuc.eq.1)write(51,*)' N. OF ACTIVE PROTON LEVELS = ', NNST 
 
-      do i=1,nnst
-       if(inuc.eq.1) then ! in output il codice vuole solo il potenziale centrale per protoni
-         do ii=1,nmaxt    ! e quindi devo togliergli la parte coulombiana che avevo aggiunto in precedenza
-           VN(ii)=VN(ii)-VC(ii) ! per comodita'
-         enddo
-       endif
-      enddo
+!      do i=1,nnst
+!       if(inuc.eq.1) then
+!         do ii=1,nmaxt   
+!           VN(ii)=VN(ii)-VC(ii) ! eventually removes coulomb
+!         enddo
+!       endif
+!      enddo
 
       return
 
