@@ -4,7 +4,7 @@
        integer     , parameter :: lmax=15,mphon=250,mfrag=10,NRMAX=100000
        integer     , parameter :: Nbox=150
 !----- Definition of mesh and limit of dispersion relation -----!
-       real(kind=8), parameter :: dr=0.1, dW = 0.01d0, EcutFunction = 20.d0
+       real(kind=8), parameter :: dr=0.1, dW = 0.01d0, EcutFunction = 30.d0
 !---------------------------------------!
 
        real(kind=8) ::  ek,w,betal,BE_Lambda,hcoup,emin,emax,              &
@@ -645,9 +645,9 @@ end subroutine define_minima
         
         do i=1,NLivelli
          ek(i)=abs(e_sp(i)-efn)
-!         if(e_sp(i).gt.0.d0)exit
+         if(e_sp(i).gt.EcutFunction)exit
         enddo
-!        NLivelli = i
+        NLivelli = i
       
      end subroutine
      
