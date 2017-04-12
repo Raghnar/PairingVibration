@@ -1,6 +1,6 @@
        module Stuff
        implicit none
-!----- Definition of vector sizes -----!
+!----- Definition of vector sizes ------!
        integer     , parameter :: lmax=15,mphon=250,mfrag=10,NRMAX=100000
        integer     , parameter :: Nbox=150
 !----- Definition of mesh and limit of dispersion relation -----!
